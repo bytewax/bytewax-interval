@@ -1,0 +1,12 @@
+-e .
+-r doc.in
+-r doctest.in
+ipython
+mypy
+pytest
+colorama
+pre-commit
+ruff
+sphinx-autobuild
+types-docutils
+vermin
