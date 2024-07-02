@@ -60,7 +60,7 @@ class IntervalLogic(ABC, Generic[V, W, S]):
     """
 
     @abstractmethod
-    def on_value(self, LeftRight, value: V) -> Iterable[W]:
+    def on_value(self, side: LeftRight, value: V) -> Iterable[W]:
         """Called on each new upstream item in within this interval.
 
         Will be called only once with a left side item that created
@@ -711,7 +711,7 @@ def join_interval(
             wait_for_system_duration=clock.wait_for_system_duration,
         )
 
-    names = [i for i in range(len(rights) + 1)]
+    names = [str(i) for i in range(len(rights) + 1)]
 
     logic_class: Callable[
         [_JoinState], IntervalLogic[Tuple[str, V], _JoinState, _JoinState]
@@ -731,7 +731,7 @@ def join_interval(
     def shim_builder(
         resume_state: Optional[_JoinState],
     ) -> IntervalLogic[Tuple[str, V], _JoinState, _JoinState]:
-        state = _JoinState.for_side_count(len(names))
+        state = _JoinState.for_names(names)
         return logic_class(state)
 
     interval_out = interval(

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Tuple
 
+import bytewax.interval_join.operators.interval as iv
 import bytewax.operators as op
-import bytewax.operators.interval as iv
 from bytewax.dataflow import Dataflow
 from bytewax.operators.windowing import ZERO_TD, EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main

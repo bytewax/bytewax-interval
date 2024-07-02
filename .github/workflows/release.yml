@@ -19,9 +19,11 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.x'
+        python-version: '3.12'
+    - name: Install uv
+      run: pipx install uv
     - name: Install build dependencies
-      run: python -m pip install -U setuptools wheel build
+      run: uv pip install build
     - name: Build
       run: python -m build .
     - name: Publish

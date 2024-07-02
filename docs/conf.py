@@ -1,5 +1,4 @@
 import os
-import re
 from typing import Optional
 
 import docutils.nodes as dn
