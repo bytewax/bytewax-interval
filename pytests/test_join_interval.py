@@ -5,7 +5,7 @@ from typing import List, Literal, Tuple
 import bytewax.interval_join.operators.interval as iv
 import bytewax.operators as op
 from bytewax.dataflow import Dataflow
-from bytewax.operators.windowing import ZERO_TD, EventClock
+from bytewax.operators.windowing import EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main
 
 
@@ -58,7 +58,7 @@ def test_join_interval_complete() -> None:
     ]
     inp_right = [
         _Event(align_to + timedelta(seconds=1), "right1"),
-        _Event(align_to + timedelta(seconds=2), "right2"),
+        _Event(align_to + timedelta(seconds=3), "right2"),
     ]
     out_down: List[Tuple[str, str]] = []
 
