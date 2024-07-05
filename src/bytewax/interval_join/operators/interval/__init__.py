@@ -459,19 +459,20 @@ def interval(
 
 
 @dataclass
-class _JoinIntervalCompleteLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinState]):
+class _JoinIntervalCompleteLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_value(self, side: LeftRight, value: Tuple[str, V]) -> Iterable[_JoinState]:
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
         join_side, join_value = value
         self.state.set_val(join_side, join_value)
 
         if self.state.all_set():
             state = copy.deepcopy(self.state)
-            # Only reset right side since we'll never see left side
+            # Only reset all right sides since we'll never see left side
             # again by definition in an interval.
-            self.state.seen["right"] = []
+            for i in range(1, len(self.state.seen)):
+                self.state.seen[i] = []
             return (state,)
         else:
             return _EMPTY
@@ -486,11 +487,11 @@ class _JoinIntervalCompleteLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinS
 
 
 @dataclass
-class _JoinIntervalFinalLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinState]):
+class _JoinIntervalFinalLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_value(self, side: LeftRight, value: Tuple[str, V]) -> Iterable[_JoinState]:
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
         join_side, join_value = value
         self.state.set_val(join_side, join_value)
         return _EMPTY
@@ -506,11 +507,11 @@ class _JoinIntervalFinalLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinStat
 
 
 @dataclass
-class _JoinIntervalRunningLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinState]):
+class _JoinIntervalRunningLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_value(self, side: LeftRight, value: Tuple[str, V]) -> Iterable[_JoinState]:
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
         join_side, join_value = value
         self.state.set_val(join_side, join_value)
         return (copy.deepcopy(self.state),)
@@ -525,11 +526,11 @@ class _JoinIntervalRunningLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinSt
 
 
 @dataclass
-class _JoinIntervalProductLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinState]):
+class _JoinIntervalProductLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_value(self, side: LeftRight, value: Tuple[str, V]) -> Iterable[_JoinState]:
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
         join_side, join_value = value
         self.state.add_val(join_side, join_value)
         return _EMPTY
@@ -544,11 +545,9 @@ class _JoinIntervalProductLogic(IntervalLogic[Tuple[str, V], _JoinState, _JoinSt
         return copy.deepcopy(self.state)
 
 
-def _add_side_builder(i: int) -> Callable[[V], Tuple[str, V]]:
-    s = str(i)
-
-    def add_side(v: V) -> Tuple[str, V]:
-        return (s, v)
+def _add_side_builder(i: int) -> Callable[[V], Tuple[int, V]]:
+    def add_side(v: V) -> Tuple[int, V]:
+        return (i, v)
 
     return add_side
 
@@ -711,10 +710,8 @@ def join_interval(
             wait_for_system_duration=clock.wait_for_system_duration,
         )
 
-    names = [str(i) for i in range(len(rights) + 1)]
-
     logic_class: Callable[
-        [_JoinState], IntervalLogic[Tuple[str, V], _JoinState, _JoinState]
+        [_JoinState], IntervalLogic[Tuple[int, V], _JoinState, _JoinState]
     ]
     if mode == "complete":
         logic_class = _JoinIntervalCompleteLogic
@@ -730,8 +727,8 @@ def join_interval(
 
     def shim_builder(
         resume_state: Optional[_JoinState],
-    ) -> IntervalLogic[Tuple[str, V], _JoinState, _JoinState]:
-        state = _JoinState.for_names(names)
+    ) -> IntervalLogic[Tuple[int, V], _JoinState, _JoinState]:
+        state = _JoinState.for_side_count(len(rights) + 1)
         return logic_class(state)
 
     interval_out = interval(

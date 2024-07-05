@@ -67,6 +67,7 @@ def test_join_interval_complete() -> None:
     run_main(flow)
     assert out_down == [
         ("left", "right1"),
+        ("left", "right2"),
     ]
 
 
