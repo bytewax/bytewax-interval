@@ -5,7 +5,7 @@ from typing import Iterable, List, Optional, Tuple
 import bytewax.interval_join.operators.interval as iv
 import bytewax.operators as op
 from bytewax.dataflow import Dataflow
-from bytewax.interval_join.operators.interval import IntervalLogic
+from bytewax.interval_join.operators.interval import IntervalLogic, LeftRight
 from bytewax.operators.windowing import EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main
 from typing_extensions import override
@@ -22,8 +22,8 @@ class _BaseTestLogic(IntervalLogic[_Event, Tuple, str]):
         self.left_value = resume_state
 
     @override
-    def on_item(self, side: int, value: _Event) -> Iterable[Tuple]:
-        if side == 0:
+    def on_value(self, side: LeftRight, value: _Event) -> Iterable[Tuple]:
+        if side == "left":
             self.left_value = value.value
             return [("NEW", self.left_value)]
         else:

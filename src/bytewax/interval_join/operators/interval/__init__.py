@@ -18,6 +18,8 @@ from typing import (
     cast,
 )
 
+from typing_extensions import overload, override
+
 import bytewax.operators as op
 from bytewax.dataflow import operator
 from bytewax.operators import (
@@ -42,7 +44,9 @@ from bytewax.operators.windowing import (
     EventClock,
     WindowMetadata,
 )
-from typing_extensions import overload, override
+
+LeftRight: TypeAlias = Literal["left", "right"]
+"""Which side did a value come from."""
 
 
 class IntervalLogic(ABC, Generic[V, W, S]):
@@ -56,13 +60,15 @@ class IntervalLogic(ABC, Generic[V, W, S]):
     """
 
     @abstractmethod
-    def on_item(self, side: int, value: V) -> Iterable[W]:
+    def on_value(self, side: LeftRight, value: V) -> Iterable[W]:
         """Called on each new upstream item in within this interval.
 
         Will be called only once with a left side item that created
         the interval.
 
-        :arg value: The value of the upstream `(side, value)`.
+        :arg side: Either `"left"` or `"right"`.
+
+        :arg value: The value of the upstream `(key, value)`.
 
         :returns: Any values to emit downstream. Values will
             automatically be wrapped with key.
@@ -150,7 +156,7 @@ _IntervalEvent: TypeAlias = Union[_Late[V], _Emit[W], _Unpaired[V]]
 @dataclass
 class _IntervalLogic(
     StatefulBatchLogic[
-        Tuple[int, V],
+        Tuple[LeftRight, V],
         _IntervalEvent[V, W],
         _IntervalSnapshot[V, SC, S],
     ]
@@ -190,7 +196,7 @@ class _IntervalLogic(
                     entry.timestamp >= state.meta.open_time
                     and entry.timestamp <= state.meta.close_time
                 ):
-                    ws = state.logic.on_item(1, entry.value)
+                    ws = state.logic.on_value("right", entry.value)
                     yield from (("E", w) for w in ws)
 
                     entry.paired = True
@@ -229,7 +235,7 @@ class _IntervalLogic(
 
     @override
     def on_batch(
-        self, values: List[Tuple[int, V]]
+        self, values: List[Tuple[LeftRight, V]]
     ) -> Tuple[Iterable[_IntervalEvent[V, W]], bool]:
         self.clock.before_batch()
         events: List[_IntervalEvent[V, W]] = []
@@ -243,7 +249,7 @@ class _IntervalLogic(
                 events.append(("L", value))
                 continue
 
-            if side == 0:
+            if side == "left":
                 try:
                     open_time = timestamp - self.gap_before
                 except OverflowError:
@@ -259,9 +265,9 @@ class _IntervalLogic(
                 state = _IntervalLogicState(meta, logic)
                 self.opened.append(state)
 
-                ws = logic.on_item(side, value)
+                ws = logic.on_value("left", value)
                 events.extend(("E", w) for w in ws)
-            elif side == 1:
+            elif side == "right":
                 entry = _IntervalQueueEntry(value, timestamp)
                 self.queue.append(entry)
             else:
@@ -360,7 +366,7 @@ def _unwrap_interval_unpaired(event: _IntervalEvent[V, W]) -> Optional[V]:
 def interval(
     step_id: str,
     left: KeyedStream[V],
-    clock: Clock,
+    clock: Clock[V, SC],
     gap_before: timedelta,
     gap_after: timedelta,
     builder: Callable[[Optional[S]], IntervalLogic[V, W, S]],
@@ -397,10 +403,11 @@ def interval(
     :returns: Interval result streams.
 
     """
-    named_left = op.map_value("name_left", left, lambda v: (0, v))
-    named_right = op.map_value("name_right", right, lambda v: (1, v))
+    named_left = op.map_value("name_left", left, lambda v: ("left", v))
+    named_right = op.map_value("name_right", right, lambda v: ("right", v))
+    # mypy doesn't know when to convert a `str` to a `Literal`.
     merged = cast(
-        KeyedStream[Tuple[int, V]], op.merge("merge", named_left, named_right)
+        KeyedStream[Tuple[LeftRight, V]], op.merge("merge", named_left, named_right)
     )
 
     def shim_logic_builder(
@@ -452,18 +459,20 @@ def interval(
 
 
 @dataclass
-class _JoinIntervalCompleteLogic(IntervalLogic[V, _JoinState, _JoinState]):
+class _JoinIntervalCompleteLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_item(self, side: int, value: V) -> Iterable[_JoinState]:
-        self.state.set_val(side, value)
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
+        join_side, join_value = value
+        self.state.set_val(join_side, join_value)
 
         if self.state.all_set():
             state = copy.deepcopy(self.state)
-            # Only reset right side since we'll never see left side
+            # Only reset all right sides since we'll never see left side
             # again by definition in an interval.
-            self.state.seen[1] = []
+            for i in range(1, len(self.state.seen)):
+                self.state.seen[i] = []
             return (state,)
         else:
             return _EMPTY
@@ -478,12 +487,13 @@ class _JoinIntervalCompleteLogic(IntervalLogic[V, _JoinState, _JoinState]):
 
 
 @dataclass
-class _JoinIntervalFinalLogic(IntervalLogic[V, _JoinState, _JoinState]):
+class _JoinIntervalFinalLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_item(self, side: int, value: V) -> Iterable[_JoinState]:
-        self.state.set_val(side, value)
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
+        join_side, join_value = value
+        self.state.set_val(join_side, join_value)
         return _EMPTY
 
     @override
@@ -497,12 +507,13 @@ class _JoinIntervalFinalLogic(IntervalLogic[V, _JoinState, _JoinState]):
 
 
 @dataclass
-class _JoinIntervalRunningLogic(IntervalLogic[V, _JoinState, _JoinState]):
+class _JoinIntervalRunningLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_item(self, side: int, value: V) -> Iterable[_JoinState]:
-        self.state.set_val(side, value)
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
+        join_side, join_value = value
+        self.state.set_val(join_side, join_value)
         return (copy.deepcopy(self.state),)
 
     @override
@@ -515,12 +526,13 @@ class _JoinIntervalRunningLogic(IntervalLogic[V, _JoinState, _JoinState]):
 
 
 @dataclass
-class _JoinIntervalProductLogic(IntervalLogic[V, _JoinState, _JoinState]):
+class _JoinIntervalProductLogic(IntervalLogic[Tuple[int, V], _JoinState, _JoinState]):
     state: _JoinState
 
     @override
-    def on_item(self, side: int, value: V) -> Iterable[_JoinState]:
-        self.state.add_val(side, value)
+    def on_value(self, side: LeftRight, value: Tuple[int, V]) -> Iterable[_JoinState]:
+        join_side, join_value = value
+        self.state.add_val(join_side, join_value)
         return _EMPTY
 
     @override
@@ -531,6 +543,13 @@ class _JoinIntervalProductLogic(IntervalLogic[V, _JoinState, _JoinState]):
     @override
     def snapshot(self) -> _JoinState:
         return copy.deepcopy(self.state)
+
+
+def _add_side_builder(i: int) -> Callable[[V], Tuple[int, V]]:
+    def add_side(v: V) -> Tuple[int, V]:
+        return (i, v)
+
+    return add_side
 
 
 @overload
@@ -670,7 +689,12 @@ def join_interval(
         once each interval has closed.
 
     """
-    merged_rights = op.merge("merge", *rights)
+    sided_left = op.map_value("side_left_0", left, _add_side_builder(0))
+    sided_rights = [
+        op.map_value(f"side_right_{i + 1}", right, _add_side_builder(i + 1))
+        for i, right in enumerate(rights)
+    ]
+    merged_rights = op.merge("merge", *sided_rights)
 
     # TODO: Egregious hack. Remove when we refactor to have timestamps
     # in stream.
@@ -678,8 +702,8 @@ def join_interval(
         value_ts_getter = clock.ts_getter
 
         def shim_getter(i_v: Tuple[str, V]) -> datetime:
-            # _, v = i_v
-            return value_ts_getter(i_v)
+            _, v = i_v
+            return value_ts_getter(v)
 
         clock = EventClock(
             ts_getter=shim_getter,
@@ -709,7 +733,7 @@ def join_interval(
 
     interval_out = interval(
         "interval",
-        left,
+        sided_left,
         clock,
         gap_before,
         gap_after,
