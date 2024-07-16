@@ -31,7 +31,7 @@ jobs:
       with:
         repository-url: https://test.pypi.org/legacy/
         skip-existing: true
-    - uses: sigstore/gh-action-sigstore-python@v2.1.0
+    - uses: sigstore/gh-action-sigstore-python@v3.0.0
       with:
         inputs: ./dist/*.tar.gz ./dist/*.whl
         upload-signing-artifacts: true
