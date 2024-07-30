@@ -307,13 +307,15 @@ class _IntervalLogic(
 
     @override
     def on_eof(self) -> Tuple[Iterable[_IntervalEvent[V, W]], bool]:
-        watermark = self.left_clock.on_eof()
-        assert watermark >= self._last_left_watermark
-        self._last_left_watermark = watermark
+        left_watermark = self.left_clock.on_eof()
+        assert left_watermark >= self._last_left_watermark
+        self._last_left_watermark = left_watermark
 
-        watermark = self.right_clock.on_eof()
-        assert watermark >= self._last_right_watermark
-        self._last_right_watermark = watermark
+        right_watermark = self.right_clock.on_eof()
+        assert right_watermark >= self._last_right_watermark
+        self._last_right_watermark = right_watermark
+        
+        watermark = min(left_watermark, right_watermark)
 
         events = list(self._handle_inserted(watermark))
         events.extend(self._handle_closed(watermark))
