@@ -18,8 +18,6 @@ from typing import (
     cast,
 )
 
-from typing_extensions import overload, override
-
 import bytewax.operators as op
 from bytewax.dataflow import operator
 from bytewax.operators import (
@@ -44,6 +42,7 @@ from bytewax.operators.windowing import (
     EventClock,
     WindowMetadata,
 )
+from typing_extensions import overload, override
 
 LeftRight: TypeAlias = Literal["left", "right"]
 """Which side did a value come from."""
@@ -142,7 +141,8 @@ class _IntervalLogicState(Generic[V, W, S]):
 
 @dataclass(frozen=True)
 class _IntervalSnapshot(Generic[V, SC, S]):
-    clock_snap: SC
+    left_clock_snap: SC
+    right_clock_snap: SC
     queue: List[_IntervalQueueEntry[V]]
     logic_snaps: List[_IntervalLogicSnapshot[S]]
 
@@ -161,7 +161,8 @@ class _IntervalLogic(
         _IntervalSnapshot[V, SC, S],
     ]
 ):
-    clock: ClockLogic[V, SC]
+    left_clock: ClockLogic[V, SC]
+    right_clock: ClockLogic[V, SC]
     gap_before: timedelta
     gap_after: timedelta
     builder: Callable[[Optional[S]], IntervalLogic[V, W, S]]
@@ -169,7 +170,8 @@ class _IntervalLogic(
     queue: List[_IntervalQueueEntry[V]] = field(default_factory=list)
     opened: List[_IntervalLogicState[V, W, S]] = field(default_factory=list)
 
-    _last_watermark: datetime = UTC_MIN
+    _last_left_watermark: datetime = UTC_MIN
+    _last_right_watermark: datetime = UTC_MIN
 
     def _handle_inserted(self, watermark: datetime) -> Iterable[_IntervalEvent[V, W]]:
         last_timestamp = UTC_MIN
@@ -237,19 +239,20 @@ class _IntervalLogic(
     def on_batch(
         self, values: List[Tuple[LeftRight, V]]
     ) -> Tuple[Iterable[_IntervalEvent[V, W]], bool]:
-        self.clock.before_batch()
+        self.left_clock.before_batch()
+        self.right_clock.before_batch()
         events: List[_IntervalEvent[V, W]] = []
 
         for side, value in values:
-            timestamp, watermark = self.clock.on_item(value)
-            assert watermark >= self._last_watermark
-            self._last_watermark = watermark
-
-            if timestamp < self._last_watermark:
-                events.append(("L", value))
-                continue
-
             if side == "left":
+                timestamp, left_watermark = self.left_clock.on_item(value)
+                assert left_watermark >= self._last_left_watermark
+                self._last_left_watermark = left_watermark
+
+                if timestamp < self._last_left_watermark:
+                    events.append(("L", value))
+                    continue
+
                 try:
                     open_time = timestamp - self.gap_before
                 except OverflowError:
@@ -268,6 +271,13 @@ class _IntervalLogic(
                 ws = logic.on_value("left", value)
                 events.extend(("E", w) for w in ws)
             elif side == "right":
+                timestamp, right_watermark = self.right_clock.on_item(value)
+                assert right_watermark >= self._last_right_watermark
+                self._last_right_watermark = right_watermark
+
+                if timestamp < self._last_right_watermark:
+                    events.append(("L", value))
+                    continue
                 entry = _IntervalQueueEntry(value, timestamp)
                 self.queue.append(entry)
             else:
@@ -275,6 +285,8 @@ class _IntervalLogic(
                 raise ValueError(msg)
 
         self.queue.sort(key=lambda entry: entry.timestamp)
+
+        watermark = min(self._last_left_watermark, self._last_right_watermark)
         events.extend(self._handle_inserted(watermark))
         events.extend(self._handle_closed(watermark))
 
@@ -282,9 +294,15 @@ class _IntervalLogic(
 
     @override
     def on_notify(self) -> Tuple[Iterable[_IntervalEvent[V, W]], bool]:
-        watermark = self.clock.on_notify()
-        assert watermark >= self._last_watermark
-        self._last_watermark = watermark
+        left_watermark = self.left_clock.on_notify()
+        assert left_watermark >= self._last_left_watermark
+        self._last_left_watermark = left_watermark
+
+        right_watermark = self.right_clock.on_notify()
+        assert right_watermark >= self._last_right_watermark
+        self._last_right_watermark = right_watermark
+
+        watermark = min(left_watermark, right_watermark)
 
         events = list(self._handle_inserted(watermark))
         events.extend(self._handle_closed(watermark))
@@ -293,9 +311,15 @@ class _IntervalLogic(
 
     @override
     def on_eof(self) -> Tuple[Iterable[_IntervalEvent[V, W]], bool]:
-        watermark = self.clock.on_eof()
-        assert watermark >= self._last_watermark
-        self._last_watermark = watermark
+        left_watermark = self.left_clock.on_eof()
+        assert left_watermark >= self._last_left_watermark
+        self._last_left_watermark = left_watermark
+
+        right_watermark = self.right_clock.on_eof()
+        assert right_watermark >= self._last_right_watermark
+        self._last_right_watermark = right_watermark
+
+        watermark = min(left_watermark, right_watermark)
 
         events = list(self._handle_inserted(watermark))
         events.extend(self._handle_closed(watermark))
@@ -309,13 +333,14 @@ class _IntervalLogic(
             default=None,
         )
         if notify_at is not None:
-            notify_at = self.clock.to_system_utc(notify_at)
+            notify_at = self.left_clock.to_system_utc(notify_at)
         return notify_at
 
     @override
     def snapshot(self) -> _IntervalSnapshot[V, SC, S]:
         return _IntervalSnapshot(
-            self.clock.snapshot(),
+            self.left_clock.snapshot(),
+            self.right_clock.snapshot(),
             copy.deepcopy(self.queue),
             [state.snapshot() for state in self.opened],
         )
@@ -420,10 +445,12 @@ def interval(
         resume_state: Optional[_IntervalSnapshot[V, SC, S]],
     ) -> _IntervalLogic[V, W, SC, S]:
         if resume_state is not None:
-            clock_logic = clock.build(resume_state.clock_snap)
+            left_clock_logic = clock.build(resume_state.left_clock_snap)
+            right_clock_logic = clock.build(resume_state.right_clock_snap)
             logics = [shim_logic_builder(snap) for snap in resume_state.logic_snaps]
             return _IntervalLogic(
-                clock_logic,
+                left_clock_logic,
+                right_clock_logic,
                 gap_before,
                 gap_after,
                 builder,
@@ -431,9 +458,11 @@ def interval(
                 logics,
             )
         else:
-            clock_logic = clock.build(None)
+            left_clock_logic = clock.build(None)
+            right_clock_logic = clock.build(None)
             return _IntervalLogic(
-                clock_logic,
+                left_clock_logic,
+                right_clock_logic,
                 gap_before,
                 gap_after,
                 builder,
