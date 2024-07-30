@@ -245,9 +245,9 @@ class _IntervalLogic(
 
         for side, value in values:
             if side == "left":
-                timestamp, watermark = self.left_clock.on_item(value)
-                assert watermark >= self._last_left_watermark
-                self._last_left_watermark = watermark
+                timestamp, left_watermark = self.left_clock.on_item(value)
+                assert left_watermark >= self._last_left_watermark
+                self._last_left_watermark = left_watermark
 
                 if timestamp < self._last_left_watermark:
                     events.append(("L", value))
