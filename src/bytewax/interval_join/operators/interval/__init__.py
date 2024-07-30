@@ -271,9 +271,9 @@ class _IntervalLogic(
                 ws = logic.on_value("left", value)
                 events.extend(("E", w) for w in ws)
             elif side == "right":
-                timestamp, watermark = self.right_clock.on_item(value)
-                assert watermark >= self._last_right_watermark
-                self._last_right_watermark = watermark
+                timestamp, right_watermark = self.right_clock.on_item(value)
+                assert right_watermark >= self._last_right_watermark
+                self._last_right_watermark = right_watermark
 
                 if timestamp < self._last_right_watermark:
                     events.append(("L", value))
