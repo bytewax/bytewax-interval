@@ -20,15 +20,16 @@ def _build_dataflow(
     inp_left: List[_Event],
     inp_right: List[_Event],
     out_down: List[Tuple[str, str]],
+    batch_size: int = 1,
+    gap: timedelta = timedelta(seconds=2),
 ) -> Dataflow:
     clock = EventClock(
-        lambda e: e.timestamp, wait_for_system_duration=timedelta(seconds=10)
+        lambda e: e.timestamp, wait_for_system_duration=timedelta(seconds=5)
     )
-    gap = timedelta(seconds=2)
 
     flow = Dataflow("test_df")
-    lefts = op.input("inp_left", flow, TestingSource(inp_left))
-    rights = op.input("inp_right", flow, TestingSource(inp_right))
+    lefts = op.input("inp_left", flow, TestingSource(inp_left, batch_size))
+    rights = op.input("inp_right", flow, TestingSource(inp_right, batch_size))
     keyed_lefts = op.key_on("key_left", lefts, lambda e: "ALL")
     keyed_rights = op.key_on("key_right", rights, lambda e: "ALL")
     wo = iv.join_interval(
@@ -68,6 +69,42 @@ def test_join_interval_complete() -> None:
     assert out_down == [
         ("left", "right1"),
         ("left", "right2"),
+    ]
+
+
+def test_join_interval_batch_complete() -> None:
+    align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
+    inp_left = [
+        _Event(align_to, "left"),
+        _Event(align_to + timedelta(seconds=1), "left1"),
+        _Event(align_to + timedelta(seconds=2), "left2"),
+        _Event(align_to + timedelta(seconds=3), "left3"),
+        _Event(align_to + timedelta(seconds=4), "left3"),
+        _Event(align_to + timedelta(seconds=5), "left5"),
+    ]
+    inp_right = [
+        _Event(align_to, "right"),
+        _Event(align_to + timedelta(seconds=1), "right1"),
+        _Event(align_to + timedelta(seconds=2), "right2"),
+        _Event(align_to + timedelta(seconds=3), "right3"),
+    ]
+    out_down: List[Tuple[str, str]] = []
+
+    flow = _build_dataflow(
+        "complete",
+        inp_left,
+        inp_right,
+        out_down,
+        batch_size=5,
+        gap=timedelta(seconds=0.5),
+    )
+
+    run_main(flow)
+    assert out_down == [
+        ("left", "right"),
+        ("left1", "right1"),
+        ("left2", "right2"),
+        ("left3", "right3"),
     ]
 
 
