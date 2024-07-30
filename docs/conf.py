@@ -1,4 +1,7 @@
+# noqa: D100
+# Configuration file for the Sphinx documentation builder.
 import os
+import sys
 from typing import Optional
 
 import docutils.nodes as dn
@@ -9,16 +12,24 @@ from sphinx.environment import BuildEnvironment
 from sphinx.errors import NoUri
 from sphinx.ext.intersphinx import missing_reference
 
+# -- Path setup --------------------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#confval-extensions
+# We have some custom plugins defined in this directory.
+
+sys.path.insert(0, os.path.abspath("."))
+
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "Bytewax"
-copyright = "2024, Bytewax, Inc"  # noqa: A001
-author = "Bytewax, Inc."
 
 with open("../pyproject.toml", "rb") as f:
     data = tomllib.load(f)
     pproj_version = data["project"]["version"]
+    project_name = data["project"]["name"]
+
+project = project_name
+copyright = "2024, Bytewax, Inc"  # noqa: A001
+author = "Bytewax, Inc."
 
 # This is the slug in the RtD URL.
 rtd_version = os.environ.get("READTHEDOCS_VERSION", "HEAD")
@@ -55,6 +66,7 @@ extensions = [
 ]
 
 intersphinx_mapping = {
+    "bytewax": ("https://docs.bytewax.io/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest/", None),
     "python": ("https://docs.python.org/3/", None),
     "sphinx": ("https://www.sphinx-doc.org/en/master/", None),
@@ -173,13 +185,13 @@ myst_substitutions = {
 }
 myst_url_schemes = {
     "gh-issue": {
-        "url": "https://github.com/bytewax/bytewax/issues/{{path}}#{{fragment}}",
+        "url": "https://github.com/bytewax/bytewax_interval/issues/{{path}}#{{fragment}}",
         "title": "Issue #{{path}}",
         "classes": ["github"],
     },
     "gh-path": {
-        "url": f"https://github.com/bytewax/bytewax/blob/{git_id}" "{{path}}",
-        "title": "bytewax/bytewax{{path}}",
+        "url": f"https://github.com/bytewax/bytewax_interval/blob/{git_id}" "{{path}}",
+        "title": "bytewax/bytewax_interval{{path}}",
         "classes": ["github"],
     },
     "http": None,
@@ -204,7 +216,12 @@ autodoc2_hidden_objects = [
 autodoc2_output_dir = "api"
 # Python package to parse to generate Markdown API docs for in the
 # above directory.
-autodoc2_packages = ["../bytewax/operators/interval"]
+autodoc2_packages = [
+    {
+        "path": "../src/bytewax/interval/__init__.py",
+        "module": "bytewax.interval",
+    },
+]
 # Controls the generation of those Markdown files. We have some
 # specific formatting requirements and inhereit from the built-in
 # renderer. This is why we need the path adjustment at the beginning
@@ -302,8 +319,28 @@ def _resolve_typing_extensions(
     return None
 
 
+def _resolve_bytewax_type_aliases(
+    app: Sphinx, env: BuildEnvironment, node: sn.pending_xref, contnode: dn.TextElement
+) -> Optional[dn.Element]:
+    """Fixes to handle Bytewax intersphinx `TypeAlias` uses.
+
+    The output of a Bytewax `TypeAlias` is a `reftype`: of `data`.
+    Intersphinx classifies these as `obj`, see
+    python -m sphinx.ext.intersphinx https://docs.bytewax.io/latest/objects.inv
+
+    Change the reftype from `obj` to `data` so that intersphinx references
+    will resolve correctly.
+    """
+    if node.get("reftarget").startswith("bytewax."):
+        node["reftype"] = "data"
+        return missing_reference(app, env, node, contnode)
+
+    return None
+
+
 def setup(app: Sphinx):
     """Install our custom Sphinx build hooks."""
     app.connect("missing-reference", _ignore_private)
     app.connect("missing-reference", _resolve_type_aliases)
     app.connect("missing-reference", _resolve_typing_extensions)
+    app.connect("missing-reference", _resolve_bytewax_type_aliases)

@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Tuple
 
-import bytewax.interval_join.operators.interval as iv
+import bytewax.interval as iv
 import bytewax.operators as op
 from bytewax.dataflow import Dataflow
-from bytewax.operators.windowing import ZERO_TD, EventClock
+from bytewax.operators.windowing import EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main
 
 
@@ -23,8 +23,11 @@ def _build_dataflow(
     batch_size: int = 1,
     gap: timedelta = timedelta(seconds=2),
 ) -> Dataflow:
-    clock = EventClock(
-        lambda e: e.timestamp, wait_for_system_duration=timedelta(seconds=5)
+    def get_ts(e: _Event) -> datetime:
+        return e.timestamp
+
+    clock: EventClock = EventClock(
+        get_ts, wait_for_system_duration=timedelta(seconds=5)
     )
 
     flow = Dataflow("test_df")
@@ -65,7 +68,7 @@ def test_join_interval_complete() -> None:
 
     flow = _build_dataflow("complete", inp_left, inp_right, out_down)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert out_down == [
         ("left", "right1"),
         ("left", "right2"),
@@ -99,7 +102,7 @@ def test_join_interval_batch_complete() -> None:
         gap=timedelta(seconds=0.5),
     )
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert out_down == [
         ("left", "right"),
         ("left1", "right1"),
@@ -121,7 +124,7 @@ def test_join_interval_final() -> None:
 
     flow = _build_dataflow("final", inp_left, inp_right, out_down)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert out_down == [
         ("left", "right2"),
     ]
@@ -140,7 +143,7 @@ def test_join_interval_running() -> None:
 
     flow = _build_dataflow("running", inp_left, inp_right, out_down)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert out_down == [
         ("left", None),
         ("left", "right1"),
@@ -161,7 +164,7 @@ def test_join_interval_product() -> None:
 
     flow = _build_dataflow("product", inp_left, inp_right, out_down)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert out_down == [
         ("left", "right1"),
         ("left", "right2"),

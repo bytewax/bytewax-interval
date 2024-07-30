@@ -2,10 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, List, Optional, Tuple
 
-import bytewax.interval_join.operators.interval as iv
+import bytewax.interval as iv
 import bytewax.operators as op
 from bytewax.dataflow import Dataflow
-from bytewax.interval_join.operators.interval import IntervalLogic, LeftRight
+from bytewax.interval import IntervalLogic, LeftRight
 from bytewax.operators.windowing import EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main
 from typing_extensions import override
@@ -17,7 +17,7 @@ class _Event:
     value: str
 
 
-class _BaseTestLogic(IntervalLogic[_Event, Tuple, str]):
+class _BaseTestLogic(IntervalLogic[_Event, Tuple, Optional[str]]):
     def __init__(self, resume_state: Optional[str]) -> None:
         self.left_value = resume_state
 
@@ -34,7 +34,7 @@ class _BaseTestLogic(IntervalLogic[_Event, Tuple, str]):
         return [("CLOSE", self.left_value)]
 
     @override
-    def snapshot(self) -> str:
+    def snapshot(self) -> Optional[str]:
         return self.left_value
 
 
@@ -51,9 +51,10 @@ def _build_dataflow(
     keyed_lefts = op.key_on("key_left", lefts, lambda _x: "KEY")
     keyed_rights = op.key_on("key_right", rights, lambda _x: "KEY")
 
-    clock = EventClock(
-        lambda e: e.timestamp, wait_for_system_duration=timedelta(seconds=10)
-    )
+    def get_ts(e: _Event) -> datetime:
+        return e.timestamp
+
+    clock = EventClock(get_ts, wait_for_system_duration=timedelta(seconds=10))
     gap = timedelta(seconds=5)
 
     int_out = iv.interval(
@@ -82,13 +83,13 @@ def test_interval_match():
     right_inp = [
         _Event(align_to, "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -104,13 +105,13 @@ def test_interval_in_before_gap():
     right_inp = [
         _Event(align_to - timedelta(seconds=3), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -126,13 +127,13 @@ def test_interval_in_after_gap():
     right_inp = [
         _Event(align_to + timedelta(seconds=3), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -148,13 +149,13 @@ def test_interval_on_before_gap():
     right_inp = [
         _Event(align_to - timedelta(seconds=5), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -170,13 +171,13 @@ def test_interval_on_after_gap():
     right_inp = [
         _Event(align_to + timedelta(seconds=5), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -193,13 +194,13 @@ def test_interval_multi_pair():
     right_inp = [
         _Event(align_to + timedelta(seconds=3), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("NEW", "left2"),
@@ -218,13 +219,13 @@ def test_interval_unpaired():
     right_inp = [
         _Event(align_to + timedelta(seconds=10), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("CLOSE", "left1"),
@@ -241,13 +242,13 @@ def test_interval_ordered():
         _Event(align_to + timedelta(seconds=5), "right2"),
         _Event(align_to + timedelta(seconds=3), "right1"),
     ]
-    down = []
-    unpaired = []
-    late = []
+    down: List[Tuple[str, str]] = []
+    unpaired: List[_Event] = []
+    late: List[_Event] = []
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)
+    run_main(flow)  # type: ignore
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),

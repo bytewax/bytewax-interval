@@ -53,10 +53,10 @@ fmt-md *files: _assert-venv
 
 # Lint the code in the repo; runs in CI
 lint: _assert-venv
-    vermin --config-file vermin-lib.ini pysrc/ pytests/ examples/
+    vermin --config-file vermin-lib.ini src/ pytests/
     vermin --config-file vermin-dev.ini docs/ *.py
-    ruff check pysrc/ pytests/ docs/ examples/ *.py
-    mypy pysrc/ pytests/ docs/ *.py
+    ruff check src/ pytests/ docs/
+    MYPYPATH=src mypy --namespace-packages --explicit-package-bases .
 
 # Manually check that all pre-commit hooks pass; runs in CI
 lint-pc: _assert-venv
@@ -70,7 +70,7 @@ test-py tests=pytests: _assert-venv
 
 # Test all code in the documentation; runs in CI
 test-doc: _assert-venv
-    cd docs/fixtures/ && sphinx-build -b doctest -E .. ../_build/
+    cd docs/ && sphinx-build -b doctest -E . ./_build/
 
 # Run all the checks that will be run in CI locally
 ci-pre: lint test-py test-doc
@@ -99,4 +99,16 @@ venv-sync-all: (venv-sync "doc") (venv-sync "dev")
 venv-compile-all:
     uv pip compile --generate-hashes -p 3.12 requirements/doc.in -o requirements/doc.txt
 
-    uv pip compile --generate-hashes -p 3.12 --all-extras pyproject.toml requirements/dev.in requirements/doc.txt -o requirements/dev.txt
+    uv pip compile --generate-hashes -p 3.8 --all-extras pyproject.toml -o requirements/lib-py3.8.txt
+    uv pip compile --generate-hashes -p 3.9 --all-extras pyproject.toml -o requirements/lib-py3.9.txt
+    uv pip compile --generate-hashes -p 3.10 --all-extras pyproject.toml -o requirements/lib-py3.10.txt
+    uv pip compile --generate-hashes -p 3.11 --all-extras pyproject.toml -o requirements/lib-py3.11.txt
+    uv pip compile --generate-hashes -p 3.12 --all-extras pyproject.toml -o requirements/lib-py3.12.txt
+
+    uv pip compile --generate-hashes -p 3.8 requirements/build.in requirements/lib-py3.8.txt -o requirements/build-py3.8.txt
+    uv pip compile --generate-hashes -p 3.9 requirements/build.in requirements/lib-py3.9.txt -o requirements/build-py3.9.txt
+    uv pip compile --generate-hashes -p 3.10 requirements/build.in requirements/lib-py3.10.txt -o requirements/build-py3.10.txt
+    uv pip compile --generate-hashes -p 3.11 requirements/build.in requirements/lib-py3.11.txt -o requirements/build-py3.11.txt
+    uv pip compile --generate-hashes -p 3.12 requirements/build.in requirements/lib-py3.12.txt -o requirements/build-py3.12.txt
+
+    uv pip compile --generate-hashes -p 3.12 --all-extras pyproject.toml requirements/dev.in requirements/lib-py3.12.txt -o requirements/dev.txt
