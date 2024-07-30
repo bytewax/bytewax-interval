@@ -285,6 +285,8 @@ class _IntervalLogic(
                 raise ValueError(msg)
 
         self.queue.sort(key=lambda entry: entry.timestamp)
+
+        watermark = min(self._last_left_watermark, self._last_right_watermark)
         events.extend(self._handle_inserted(watermark))
         events.extend(self._handle_closed(watermark))
 
@@ -299,7 +301,7 @@ class _IntervalLogic(
         right_watermark = self.right_clock.on_notify()
         assert right_watermark >= self._last_right_watermark
         self._last_right_watermark = right_watermark
-        
+
         watermark = min(left_watermark, right_watermark)
 
         events = list(self._handle_inserted(watermark))
@@ -316,7 +318,7 @@ class _IntervalLogic(
         right_watermark = self.right_clock.on_eof()
         assert right_watermark >= self._last_right_watermark
         self._last_right_watermark = right_watermark
-        
+
         watermark = min(left_watermark, right_watermark)
 
         events = list(self._handle_inserted(watermark))
