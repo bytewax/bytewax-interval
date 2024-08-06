@@ -75,7 +75,7 @@ def _build_dataflow(
     return flow
 
 
-def test_interval_match():
+def test_interval_match() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -89,7 +89,7 @@ def test_interval_match():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -97,7 +97,7 @@ def test_interval_match():
     ]
 
 
-def test_interval_in_before_gap():
+def test_interval_in_before_gap() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -111,7 +111,7 @@ def test_interval_in_before_gap():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -119,7 +119,7 @@ def test_interval_in_before_gap():
     ]
 
 
-def test_interval_in_after_gap():
+def test_interval_in_after_gap() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -133,7 +133,7 @@ def test_interval_in_after_gap():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -141,7 +141,7 @@ def test_interval_in_after_gap():
     ]
 
 
-def test_interval_on_before_gap():
+def test_interval_on_before_gap() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -155,7 +155,7 @@ def test_interval_on_before_gap():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -163,7 +163,7 @@ def test_interval_on_before_gap():
     ]
 
 
-def test_interval_on_after_gap():
+def test_interval_on_after_gap() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -177,7 +177,7 @@ def test_interval_on_after_gap():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),
@@ -185,7 +185,7 @@ def test_interval_on_after_gap():
     ]
 
 
-def test_interval_multi_pair():
+def test_interval_multi_pair() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -200,7 +200,7 @@ def test_interval_multi_pair():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("NEW", "left2"),
@@ -211,7 +211,7 @@ def test_interval_multi_pair():
     ]
 
 
-def test_interval_unpaired():
+def test_interval_unpaired() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -225,7 +225,7 @@ def test_interval_unpaired():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("CLOSE", "left1"),
@@ -233,7 +233,7 @@ def test_interval_unpaired():
     assert unpaired == right_inp
 
 
-def test_interval_ordered():
+def test_interval_ordered() -> None:
     align_to = datetime(2022, 1, 1, tzinfo=timezone.utc)
     left_inp = [
         _Event(align_to, "left1"),
@@ -248,7 +248,7 @@ def test_interval_ordered():
 
     flow = _build_dataflow(left_inp, right_inp, down, unpaired, late)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert down == [
         ("NEW", "left1"),
         ("RIGHT", "left1", "right1"),

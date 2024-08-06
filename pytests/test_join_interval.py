@@ -68,7 +68,7 @@ def test_join_interval_complete() -> None:
 
     flow = _build_dataflow("complete", inp_left, inp_right, out_down)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert out_down == [
         ("left", "right1"),
         ("left", "right2"),
@@ -102,7 +102,7 @@ def test_join_interval_batch_complete() -> None:
         gap=timedelta(seconds=0.5),
     )
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert out_down == [
         ("left", "right"),
         ("left1", "right1"),
@@ -124,7 +124,7 @@ def test_join_interval_final() -> None:
 
     flow = _build_dataflow("final", inp_left, inp_right, out_down)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert out_down == [
         ("left", "right2"),
     ]
@@ -143,7 +143,7 @@ def test_join_interval_running() -> None:
 
     flow = _build_dataflow("running", inp_left, inp_right, out_down)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert out_down == [
         ("left", None),
         ("left", "right1"),
@@ -164,7 +164,7 @@ def test_join_interval_product() -> None:
 
     flow = _build_dataflow("product", inp_left, inp_right, out_down)
 
-    run_main(flow)  # type: ignore
+    run_main(flow)
     assert out_down == [
         ("left", "right1"),
         ("left", "right2"),
