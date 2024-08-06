@@ -56,7 +56,8 @@ lint: _assert-venv
     vermin --config-file vermin-lib.ini src/ pytests/
     vermin --config-file vermin-dev.ini docs/ *.py
     ruff check src/ pytests/ docs/
-    MYPYPATH=src mypy --namespace-packages --explicit-package-bases .
+    mypy -p bytewax.interval
+    mypy pytests/ docs/
 
 # Manually check that all pre-commit hooks pass; runs in CI
 lint-pc: _assert-venv
@@ -70,7 +71,7 @@ test-py tests=pytests: _assert-venv
 
 # Test all code in the documentation; runs in CI
 test-doc: _assert-venv
-    cd docs/ && sphinx-build -b doctest -E . ./_build/
+    cd docs/fixtures/ && sphinx-build -b doctest -E .. ../_build/
 
 # Run all the checks that will be run in CI locally
 ci-pre: lint test-py test-doc
