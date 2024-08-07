@@ -13,7 +13,6 @@ from typing import (
     Literal,
     Optional,
     Tuple,
-    TypeAlias,
     Union,
     cast,
 )
@@ -42,7 +41,7 @@ from bytewax.operators.windowing import (
     EventClock,
     WindowMetadata,
 )
-from typing_extensions import overload, override
+from typing_extensions import TypeAlias, overload, override
 
 LeftRight: TypeAlias = Literal["left", "right"]
 """Which side did a value come from."""

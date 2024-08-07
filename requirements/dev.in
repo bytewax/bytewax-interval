@@ -1,10 +1,9 @@
 -e .
+-r build.in
 -r doc.in
 -r doctest.in
 ipython
 mypy
-pytest
-colorama
 pre-commit
 ruff
 sphinx-autobuild

@@ -1,1 +1,0 @@
-"""Interval joins for Bytewax."""
