@@ -1,5 +1,5 @@
-[![Actions Status](https://github.com/bytewax/bytewax-interval-operator/workflows/CI/badge.svg)](https://github.com/bytewax/bytewax-interval-operator/actions)
-[![PyPI](https://img.shields.io/pypi/v/bytewax.svg?style=flat-square)](https://pypi.org/project/bytewax-interval-operator/)
+[![Actions Status](https://github.com/bytewax/bytewax-interval/workflows/CI/badge.svg)](https://github.com/bytewax/bytewax-interval/actions)
+[![PyPI](https://img.shields.io/pypi/v/bytewax-interval.svg?style=flat-square)](https://pypi.org/project/bytewax-interval/)
 [![Bytewax User Guide](https://img.shields.io/badge/user-guide-brightgreen?style=flat-square)](https://docs.bytewax.io/stable/guide/index.html)
 
 <picture>
