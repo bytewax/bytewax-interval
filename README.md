@@ -17,3 +17,6 @@ within the specified timestamp gap.
 Values are always applied to the logic in timestamp (not arrival) order.
 
 ## License
+
+bytewax-interval is commercially licensed with publicly available source code.
+Please see the full details in [LICENSE](./LICENSE.md).
