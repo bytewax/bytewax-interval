@@ -216,12 +216,7 @@ autodoc2_hidden_objects = [
 autodoc2_output_dir = "api"
 # Python package to parse to generate Markdown API docs for in the
 # above directory.
-autodoc2_packages = [
-    {
-        "path": "../src/bytewax/interval/__init__.py",
-        "module": "bytewax.interval",
-    },
-]
+autodoc2_packages = ["../src/bytewax/interval/"]
 # Controls the generation of those Markdown files. We have some
 # specific formatting requirements and inhereit from the built-in
 # renderer. This is why we need the path adjustment at the beginning
