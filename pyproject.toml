@@ -1,6 +1,6 @@
 [project]
 name = "bytewax-interval"
-version = "0.0.1"
+version = "0.1"
 description = "Interval join operator for Bytewax"
 readme = "README.md"
 requires-python = ">=3.9"
