@@ -2,13 +2,14 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Iterable, List, Optional, Tuple
 
+from typing_extensions import override
+
 import bytewax.interval as iv
 import bytewax.operators as op
 from bytewax.dataflow import Dataflow
 from bytewax.interval import IntervalLogic, LeftRight
 from bytewax.operators.windowing import EventClock
 from bytewax.testing import TestingSink, TestingSource, run_main
-from typing_extensions import override
 
 
 @dataclass(frozen=True)
