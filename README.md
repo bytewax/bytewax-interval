@@ -18,5 +18,8 @@ Values are always applied to the logic in timestamp (not arrival) order.
 
 ## License
 
-bytewax-interval is commercially licensed with publicly available source code.
-Please see the full details in [LICENSE](./LICENSE.md).
+`bytewax-interval` is commercially licensed with publicly available
+source code. You are welcome to prototype using this module for free,
+but any use on business data requires a paid license. See
+https://modules.bytewax.io/ for a license. Please see the full details
+in [LICENSE](./LICENSE.md).
