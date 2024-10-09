@@ -65,10 +65,7 @@ bytewax==0.21.0 \
     --hash=sha256:ece6452ce1c609915447402214714d7392cb7f864ea968a584b649ab8007466d \
     --hash=sha256:f551b2eef7b354b439fd13f62349528c1eff9e59ffbfdf2a7d4fe0141b4ae6ca \
     --hash=sha256:fffebf6ee9ed44f701d16156ce386d2ed2b7d3fe9cf3b381183c49e37ab8639b
-    # via
-    #   -r requirements/lib-py3.12.txt
-    #   bytewax-interval (pyproject.toml)
-    #   bytewax-interval
+    # via bytewax-interval
 certifi==2024.6.2 \
     --hash=sha256:3cd43f1c6fa7dedc5899d69d3ad0398fd018ad1a17fba83ddaf78aa46c747516 \
     --hash=sha256:ddc6c8ce995e6987e7faf5e3f1b02b302836a0e5d98ece18392cb1a36c72ad56
@@ -432,16 +429,14 @@ pluggy==1.5.0 \
     --hash=sha256:2cffa88e94fdc978c4c574f15f9e59b7f4201d439195c3715ca9e2486f1d0cf1 \
     --hash=sha256:44e1ad92c8ca002de6377e165f3e0f1be63266ab4d554740532335b9d75ea669
     # via pytest
-pre-commit==3.7.1 \
-    --hash=sha256:8ca3ad567bc78a4972a3f1a477e94a79d4597e8140a6e0b651c5e33899c3654a \
-    --hash=sha256:fae36fd1d7ad7d6a5a1c0b0d5adb2ed1a3bda5a21bf6c3e5372073d7a11cd4c5
+pre-commit==4.0.1 \
+    --hash=sha256:80905ac375958c0444c65e9cebebd948b3cdb518f335a091a670a89d652139d2 \
+    --hash=sha256:efde913840816312445dc98787724647c65473daefe420785f885e8ed9a06878
     # via -r requirements/dev.in
 prometheus-client==0.20.0 \
     --hash=sha256:287629d00b147a32dcb2be0b9df905da599b2d82f80377083ec8463309a4bb89 \
     --hash=sha256:cde524a85bce83ca359cc837f28b8c0db5cac7aa653a588fd7e84ba061c329e7
-    # via
-    #   -r requirements/lib-py3.12.txt
-    #   bytewax
+    # via bytewax
 prompt-toolkit==3.0.47 \
     --hash=sha256:0d7bfa67001d5e39d02c224b663abc33687405033a8c422d0d675a5a13361d10 \
     --hash=sha256:1e1b29cb58080b1e69f207c893a1a7bf16d127a5c30c9d17a25a5d77792e5360
@@ -648,7 +643,6 @@ typing-extensions==4.12.2 \
     --hash=sha256:04e5ca0351e0f3f85c6853954072df659d0d13fac324d0072316b67d7794700d \
     --hash=sha256:1a7ead55c7e559dd4dee8856e3a88b41225abfe1ce8df57b7c13915fe121ffb8
     # via
-    #   -r requirements/lib-py3.12.txt
     #   bytewax
     #   mypy
     #   pydata-sphinx-theme
